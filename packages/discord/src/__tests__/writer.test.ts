@@ -129,6 +129,28 @@ describe("SwitchingDiscordWriter", () => {
     expect(created[0]!.disconnected).toBe(1);
   });
 
+  it("clears current even when disconnect rejects so publish creates a new ipc", async () => {
+    const created: FakeIpc[] = [];
+    const writer = new SwitchingDiscordWriter(
+      { cursor: "app-cursor", vscode: "v", "claude-code": "c", codex: "x" },
+      (appId) => {
+        const ipc = new FakeIpc(appId);
+        ipc.disconnect = async () => {
+          ipc.disconnected += 1;
+          throw new Error("disconnect failed");
+        };
+        created.push(ipc);
+        return ipc;
+      },
+    );
+    await writer.publish(card("cursor"), 1);
+    await expect(writer.clear()).rejects.toThrow("disconnect failed");
+    await writer.publish(card("cursor"), 2);
+    expect(created).toHaveLength(2);
+    expect(created[1]!.connected).toBe(true);
+    expect(created[1]!.activities).toHaveLength(1);
+  });
+
   it("reuses the same ipc for overlapping publishes while connect is pending", async () => {
     const connecting = deferred();
     const created: FakeIpc[] = [];

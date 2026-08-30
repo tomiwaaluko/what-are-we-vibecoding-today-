@@ -30,11 +30,15 @@ export class SwitchingDiscordWriter {
 
   async clear(): Promise<void> {
     if (!this.current) return;
+    const current = this.current;
     try {
-      await this.current.ipc.clearActivity();
+      await current.ipc.clearActivity();
     } finally {
-      await this.current.ipc.disconnect();
-      this.current = null;
+      try {
+        await current.ipc.disconnect();
+      } finally {
+        if (this.current === current) this.current = null;
+      }
     }
   }
 }
