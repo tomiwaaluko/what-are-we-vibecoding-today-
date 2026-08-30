@@ -10,7 +10,7 @@ export function mapExtensionState(input: {
   chatTabTitle: string | null;
   activeFileName: string | null;
   gitBranch: string | null;
-  agentCount: number;
+  agentCount?: number;
   lastActivityAt: number;
 }): Snapshot {
   const sessionTitle =
@@ -23,7 +23,7 @@ export function mapExtensionState(input: {
     focused: input.focused,
     repo: input.workspaceFolderName,
     sessionTitle,
-    agentCount: input.agentCount,
+    agentCount: input.agentCount ?? 0,
     lastActivityAt: input.lastActivityAt,
   };
 }

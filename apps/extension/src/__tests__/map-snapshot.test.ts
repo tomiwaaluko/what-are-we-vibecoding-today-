@@ -21,6 +21,22 @@ describe("mapExtensionState", () => {
     expect(snap.agentCount).toBe(1);
   });
 
+  it("defaults agentCount to 0", () => {
+    expect(
+      mapExtensionState({
+        appName: "Cursor",
+        instanceId: "cursor-1",
+        pid: 8,
+        focused: true,
+        workspaceFolderName: "repo",
+        chatTabTitle: null,
+        activeFileName: "a.ts",
+        gitBranch: null,
+        lastActivityAt: 1,
+      }).agentCount,
+    ).toBe(0);
+  });
+
   it("falls back through file then branch", () => {
     expect(
       mapExtensionState({

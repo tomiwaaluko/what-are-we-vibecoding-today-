@@ -1,5 +1,6 @@
 import { basename, join } from "node:path";
 import * as vscode from "vscode";
+import { nextLastActivityAt } from "./activity.js";
 import { mapExtensionState } from "./map-snapshot.js";
 import { clearSnapshot, pushSnapshot } from "./client.js";
 
@@ -32,18 +33,13 @@ function chatTabTitle(): string | null {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const instanceId = `ide-${process.pid}`;
   let lastActivityAt = Date.now();
-  let lastKey = "";
 
   const send = async (reason: "activity" | "heartbeat") => {
     const folder = vscode.workspace.workspaceFolders?.[0]?.name ?? null;
     const file = vscode.window.activeTextEditor?.document.fileName;
     const fileName = file ? basename(file) : null;
     const now = Date.now();
-    const key = [folder, fileName, gitBranch(), chatTabTitle(), vscode.window.state.focused].join("|");
-    if (reason === "activity" && key !== lastKey) {
-      lastActivityAt = now;
-      lastKey = key;
-    }
+    lastActivityAt = nextLastActivityAt(reason, lastActivityAt, now);
     const snapshot = mapExtensionState({
       appName: vscode.env.appName,
       instanceId,
