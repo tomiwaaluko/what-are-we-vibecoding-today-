@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,5 +31,59 @@ describe("Claude hook scripts", () => {
 
     expect(spawnSync(process.execPath, [stop], { env, stdio: "pipe" }).status).toBe(0);
     expect(existsSync(statusPath)).toBe(false);
+  });
+});
+
+describe("Codex hook scripts", () => {
+  it("session-start writes status json from cwd; end removes it", () => {
+    const home = mkdtempSync(join(tmpdir(), "vibecoding-hooks-"));
+    const env = { ...process.env, VIBECODING_HOME: home };
+    const start = join(hooksDir, "codex-session-start.cjs");
+    const end = join(hooksDir, "codex-session-end.cjs");
+    const instanceId = `codex-cli-${process.pid}`;
+    const statusPath = join(home, "status", `${instanceId}.json`);
+    const repoRoot = join(home, "what-are-we-vibecoding-today");
+    mkdirSync(repoRoot, { recursive: true });
+
+    expect(
+      spawnSync(process.execPath, [start], {
+        env,
+        cwd: repoRoot,
+        input: "",
+        stdio: ["pipe", "pipe", "pipe"],
+      }).status,
+    ).toBe(0);
+    expect(existsSync(statusPath)).toBe(true);
+    const snapshot = JSON.parse(readFileSync(statusPath, "utf8"));
+    expect(snapshot.instanceId).toBe(instanceId);
+    expect(snapshot.pid).toBe(process.pid);
+    expect(snapshot.identity).toBe("codex");
+    expect(snapshot.surface).toBe("cli");
+    expect(snapshot.focused).toBe(false);
+    expect(snapshot.repo).toBe("what-are-we-vibecoding-today");
+    expect(snapshot.sessionTitle).toBeNull();
+    expect(snapshot.agentCount).toBe(0);
+    expect(typeof snapshot.lastActivityAt).toBe("number");
+
+    expect(spawnSync(process.execPath, [end], { env, stdio: "pipe" }).status).toBe(0);
+    expect(existsSync(statusPath)).toBe(false);
+  });
+
+  it("session-start prefers cwd from stdin json", () => {
+    const home = mkdtempSync(join(tmpdir(), "vibecoding-hooks-"));
+    const env = { ...process.env, VIBECODING_HOME: home };
+    const start = join(hooksDir, "codex-session-start.cjs");
+    const instanceId = `codex-cli-${process.pid}`;
+    const statusPath = join(home, "status", `${instanceId}.json`);
+
+    expect(
+      spawnSync(process.execPath, [start], {
+        env,
+        input: JSON.stringify({ cwd: "C:\\Users\\me\\my-codex-repo", session_id: "ignored" }),
+        stdio: ["pipe", "pipe", "pipe"],
+      }).status,
+    ).toBe(0);
+    const snapshot = JSON.parse(readFileSync(statusPath, "utf8"));
+    expect(snapshot.repo).toBe("my-codex-repo");
   });
 });
