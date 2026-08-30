@@ -1,5 +1,7 @@
-import { appDataRoot, statusDir } from "./paths.js";
-import { configPath, loadConfig, saveConfig } from "./config.js";
+import { fileURLToPath } from "node:url";
+import { appDataRoot, configPath, statusDir } from "./paths.js";
+import { loadConfig, saveConfig } from "./config.js";
+import { syncStartWithWindows } from "./startup.js";
 import { createBrokerController } from "./broker.js";
 import { pidAlive } from "./pid.js";
 import { readStatusDir } from "./ingest-files.js";
@@ -14,6 +16,7 @@ async function main(): Promise<void> {
   const home = appDataRoot(process.env);
   const config = loadConfig(home);
   saveConfig(home, config);
+  syncStartWithWindows(config.startWithWindows, process.execPath, fileURLToPath(import.meta.url));
   const missingAppIdLogged = new Set<Identity>();
   let tray: ReturnType<typeof startTrayMenu> | null = null;
   const inner = new SwitchingDiscordWriter(config.applicationIds, (appId) =>

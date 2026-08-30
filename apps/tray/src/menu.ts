@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import SysTray from "systray2";
+import SysTrayModule from "systray2";
+
+const SysTray = (SysTrayModule as { default?: typeof SysTrayModule }).default ?? SysTrayModule;
 
 export type TrayBroker = {
   setPaused: (paused: boolean) => Promise<void>;

@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "start": "node --import tsx src/main.ts"
   },
   "dependencies": {
     "@vibecoding/core": "workspace:*",
@@ -12,6 +13,7 @@
     "systray2": "^2.1.4"
   },
   "devDependencies": {
+    "tsx": "^4.8.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
