@@ -1,0 +1,18 @@
+{
+  "name": "@vibecoding/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "vibecoding": "./src/main.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vibecoding/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}
