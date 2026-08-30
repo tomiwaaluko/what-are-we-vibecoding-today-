@@ -8,6 +8,7 @@
   "dependencies": {
     "@vibecoding/core": "workspace:*",
     "@vibecoding/discord": "workspace:*",
+    "active-win": "^8.2.1",
     "systray2": "^2.1.4"
   },
   "devDependencies": {

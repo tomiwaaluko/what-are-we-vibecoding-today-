@@ -6,6 +6,7 @@ import { readStatusDir } from "./ingest-files.js";
 import { startSnapshotServer } from "./http.js";
 import { newToken, writeRuntime } from "./runtime.js";
 import { startTrayMenu } from "./menu.js";
+import { createDesktopPoller } from "./watchers/poll.js";
 import type { Identity } from "@vibecoding/core";
 import { SwitchingDiscordWriter, createXhayperIpc } from "@vibecoding/discord";
 
@@ -54,10 +55,17 @@ async function main(): Promise<void> {
       void broker.upsert(snapshot);
     }
   }, 2000);
+  const desktopPoller = createDesktopPoller({
+    upsert: (s) => broker.upsert(s),
+    remove: (id) => broker.remove(id),
+    now: () => Date.now(),
+  });
+  desktopPoller.start();
   tray = startTrayMenu({
     configPath: configPath(home),
     broker,
     onQuit: async () => {
+      desktopPoller.stop();
       await writer.clear();
       await server.close();
     },
