@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appDataRoot, configPath, statusDir } from "./paths.js";
 import { loadConfig, saveConfig } from "./config.js";
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const config = loadConfig(home);
   saveConfig(home, config);
   const entryScript = fileURLToPath(import.meta.url);
-  const repoRoot = resolve(entryScript, "../../..");
+  const repoRoot = resolve(dirname(entryScript), "../../..");
   syncStartWithWindows(config.startWithWindows, process.execPath, entryScript, undefined, repoRoot);
   const missingAppIdLogged = new Set<Identity>();
   let tray: ReturnType<typeof startTrayMenu> | null = null;

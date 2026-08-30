@@ -1,7 +1,15 @@
+import { dirname, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { syncStartWithWindows } from "../startup.js";
 
 describe("syncStartWithWindows", () => {
+  it("resolves repo root from entry script directory, not the file path", () => {
+    const entryScript = "C:\\what-are-we-vibecoding-today\\apps\\tray\\src\\main.ts";
+    const repoRoot = resolve(dirname(entryScript), "../../..");
+    expect(repoRoot).toBe("C:\\what-are-we-vibecoding-today");
+    expect(repoRoot).not.toBe("C:\\what-are-we-vibecoding-today\\apps");
+  });
+
   it("adds a Run key when enabled and deletes when disabled", () => {
     const spawnSync = vi.fn(() => ({ status: 0 }));
     syncStartWithWindows(true, "C:\\node.exe", "C:\\tray.js", spawnSync, "C:\\repo");
