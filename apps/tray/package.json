@@ -1,0 +1,16 @@
+{
+  "name": "@vibecoding/tray",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vibecoding/core": "workspace:*",
+    "@vibecoding/discord": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}
