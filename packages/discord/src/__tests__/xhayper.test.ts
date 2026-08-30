@@ -175,6 +175,44 @@ describe("createXhayperIpc", () => {
     expect(setAttempts).toBe(0);
   });
 
+  it("connect resolves when login rejects after disconnect", async () => {
+    let rejectLogin!: (err: Error) => void;
+    const loginPromise = new Promise<void>((_, reject) => {
+      rejectLogin = reject;
+    });
+    let loginStarted!: () => void;
+    const loginReady = new Promise<void>((resolve) => {
+      loginStarted = resolve;
+    });
+    let delayCalled = false;
+    const ipc = createXhayperIpc(
+      "app",
+      () => ({
+        user: {
+          setActivity: async () => {},
+          clearActivity: async () => {},
+        },
+        login: async () => {
+          loginStarted();
+          await loginPromise;
+        },
+        destroy: async () => {},
+      }),
+      {
+        delay: async () => {
+          delayCalled = true;
+        },
+      },
+    );
+
+    const connectPromise = ipc.connect();
+    await loginReady;
+    await ipc.disconnect();
+    rejectLogin(new Error("login failed"));
+    await expect(connectPromise).resolves.toBeUndefined();
+    expect(delayCalled).toBe(false);
+  });
+
   it("destroys the client even when clearActivity throws during disconnect", async () => {
     const calls: string[] = [];
     const ipc = createXhayperIpc("app", () => ({

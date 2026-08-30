@@ -33,13 +33,17 @@ export function createXhayperIpc(
       await client?.destroy().catch(() => {});
       if (cancelled) return;
       client = factory(appId);
+      const active = client;
       try {
-        await client.login();
-        if (cancelled) return;
+        await active.login();
+        if (cancelled) {
+          await active.destroy().catch(() => {});
+          return;
+        }
         opts.onStatus?.("");
         return;
       } catch {
-        await client.destroy().catch(() => {});
+        await active?.destroy().catch(() => {});
         client = null;
         if (cancelled) return;
         opts.onStatus?.("Discord not connected");
