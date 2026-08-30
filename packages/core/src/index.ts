@@ -3,3 +3,6 @@ export * from "./merge.js";
 export * from "./picker.js";
 export * from "./truncate.js";
 export * from "./compositor.js";
+export * from "./stale.js";
+export * from "./idle.js";
+export * from "./tick.js";
