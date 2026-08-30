@@ -3,15 +3,17 @@
   "version": "0.0.0",
   "type": "module",
   "bin": {
-    "vibecoding": "./src/main.ts"
+    "vibecoding": "./dist/main.js"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@vibecoding/core": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
