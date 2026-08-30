@@ -15,3 +15,7 @@ export function statusDir(env: NodeJS.ProcessEnv): string {
 export function configPath(home: string): string {
   return join(home, "config.json");
 }
+
+export function startTrayLauncherPath(home: string): string {
+  return join(home, "start-tray.cmd");
+}
