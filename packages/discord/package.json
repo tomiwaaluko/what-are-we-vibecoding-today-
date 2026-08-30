@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vibecoding/core": "workspace:*"
+    "@vibecoding/core": "workspace:*",
+    "@xhayper/discord-rpc": "^1.3.4"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

@@ -6,18 +6,28 @@ import { readStatusDir } from "./ingest-files.js";
 import { startSnapshotServer } from "./http.js";
 import { newToken, writeRuntime } from "./runtime.js";
 import { startTrayMenu } from "./menu.js";
-import type { PresenceCard } from "@vibecoding/core";
-
-class LogOnlyWriter {
-  async publish(_card: PresenceCard, _trayPid: number): Promise<void> {}
-  async clear(): Promise<void> {}
-}
+import type { Identity } from "@vibecoding/core";
+import { SwitchingDiscordWriter, createXhayperIpc } from "@vibecoding/discord";
 
 async function main(): Promise<void> {
   const home = appDataRoot(process.env);
   const config = loadConfig(home);
   saveConfig(home, config);
-  const writer = new LogOnlyWriter();
+  const missingAppIdLogged = new Set<Identity>();
+  const inner = new SwitchingDiscordWriter(config.applicationIds, (appId) => createXhayperIpc(appId));
+  const writer = {
+    async publish(card: Parameters<typeof inner.publish>[0], trayPid: number) {
+      const appId = config.applicationIds[card.identity];
+      if (!appId) {
+        if (!missingAppIdLogged.has(card.identity)) {
+          missingAppIdLogged.add(card.identity);
+          process.stderr.write(`Discord app id missing for ${card.identity}\n`);
+        }
+      }
+      await inner.publish(card, trayPid);
+    },
+    clear: () => inner.clear(),
+  };
   const broker = createBrokerController({
     writer,
     trayPid: process.pid,
