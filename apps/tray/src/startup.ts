@@ -1,12 +1,13 @@
 import type { SpawnSyncReturns } from "node:child_process";
 import { spawnSync as realSpawn } from "node:child_process";
 import { mkdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 
 const KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
 export function buildLauncherScript(execPath: string, entryScript: string, repoRoot: string): string {
-  return `@echo off\r\ncd /d "${repoRoot}"\r\n"${execPath}" --import tsx "${entryScript}"\r\n`;
+  const tsxLoader = resolve(repoRoot, "apps/tray/node_modules/tsx/dist/loader.mjs");
+  return `@echo off\r\ncd /d "${repoRoot}"\r\n"${execPath}" --import "${tsxLoader}" "${entryScript}"\r\n`;
 }
 
 function formatRunValue(launcherPath: string): string {

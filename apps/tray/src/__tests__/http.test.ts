@@ -46,4 +46,36 @@ describe("startSnapshotServer", () => {
     expect(removed).toEqual(["c"]);
     await server.close();
   });
+
+  it("applies the Windows CLI foreground heuristic before upsert", async () => {
+    const upserts: unknown[] = [];
+    const server = await startSnapshotServer({
+      token: "secret",
+      platform: "win32",
+      isConsoleForeground: () => true,
+      onUpsert: async (s) => {
+        upserts.push(s);
+      },
+      onRemove: async () => {},
+    });
+    const ok = await fetch(`http://127.0.0.1:${server.port}/snapshot`, {
+      method: "PUT",
+      headers: { Authorization: "Bearer secret", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instanceId: "codex-cli",
+        pid: 1,
+        identity: "codex",
+        surface: "cli",
+        focused: false,
+        repo: "r",
+        sessionTitle: "s",
+        agentCount: 0,
+        lastActivityAt: 1,
+      }),
+    });
+    expect(ok.status).toBe(204);
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]).toMatchObject({ focused: true });
+    await server.close();
+  });
 });

@@ -3,20 +3,29 @@ import type { DiscordIpc, SetActivityPayload } from "./ipc.js";
 
 export class SwitchingDiscordWriter {
   private current: { identity: Identity; ipc: DiscordIpc; connect: Promise<void> } | null = null;
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly appIds: Record<Identity, string>,
     private readonly createIpc: (appId: string) => DiscordIpc,
   ) {}
 
-  async publish(card: PresenceCard, trayPid: number): Promise<void> {
+  publish(card: PresenceCard, trayPid: number): Promise<void> {
+    return this.enqueue(() => this.publishNow(card, trayPid));
+  }
+
+  clear(): Promise<void> {
+    return this.enqueue(() => this.clearNow());
+  }
+
+  private async publishNow(card: PresenceCard, trayPid: number): Promise<void> {
     const appId = this.appIds[card.identity];
     if (!appId) {
-      await this.clear();
+      await this.clearNow();
       return;
     }
     if (this.current && this.current.identity !== card.identity) {
-      await this.clear();
+      await this.clearNow();
     }
     if (!this.current) {
       const ipc = this.createIpc(appId);
@@ -28,11 +37,17 @@ export class SwitchingDiscordWriter {
     await current.ipc.setActivity(toPayload(card, trayPid));
   }
 
-  async clear(): Promise<void> {
+  private async clearNow(): Promise<void> {
     if (!this.current) return;
     const current = this.current;
     this.current = null;
     await current.ipc.disconnect();
+  }
+
+  private enqueue(operation: () => Promise<void>): Promise<void> {
+    const next = this.queue.then(operation, operation);
+    this.queue = next.catch(() => {});
+    return next;
   }
 }
 

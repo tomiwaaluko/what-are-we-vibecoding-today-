@@ -23,7 +23,7 @@ describe("syncStartWithWindows", () => {
     expect(writeLauncher).toHaveBeenCalledOnce();
     const content = String(writeLauncher.mock.calls[0]![1]);
     expect(content).toContain("cd /d");
-    expect(content).toContain("--import tsx");
+    expect(content).toContain('--import "C:\\repo\\apps\\tray\\node_modules\\tsx\\dist\\loader.mjs"');
     expect(content).toContain(entryScript);
     expect(buildLauncherScript("C:\\node.exe", entryScript, "C:\\repo")).toBe(content);
     const add = spawnSync.mock.calls[0]!;

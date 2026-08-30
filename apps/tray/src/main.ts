@@ -59,10 +59,13 @@ async function main(): Promise<void> {
     onRemove: (id) => broker.remove(id),
   });
   writeRuntime(home, server.port, token);
+  const statusMtimes = new Map<string, number>();
   setInterval(() => {
-    for (const snapshot of readStatusDir(statusDir(process.env))) {
-      void broker.upsert(snapshot);
-    }
+    void (async () => {
+      for (const snapshot of await readStatusDir(statusDir(process.env), { seenMtimes: statusMtimes })) {
+        void broker.upsert(snapshot);
+      }
+    })();
   }, 2000);
   const desktopPoller = createDesktopPoller({
     upsert: (s) => broker.upsert(s),

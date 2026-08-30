@@ -175,15 +175,53 @@ describe("SwitchingDiscordWriter", () => {
     const clearing = writer.clear();
     const publishing = writer.publish(card("cursor"), 99);
 
-    expect(created).toHaveLength(2);
+    expect(created).toHaveLength(1);
 
     disconnectGate.resolve();
     await Promise.all([clearing, publishing]);
 
     expect(dying.activities).toHaveLength(1);
     expect(dying.activities[0]!.pid).toBe(1);
+    expect(created).toHaveLength(2);
     expect(created[1]!.activities).toHaveLength(1);
     expect(created[1]!.activities[0]!.pid).toBe(99);
+  });
+
+  it("serializes overlapping identity publishes while old client clear is slow", async () => {
+    const disconnectGate = deferred();
+    const created: FakeIpc[] = [];
+    const writer = new SwitchingDiscordWriter(
+      { cursor: "app-cursor", vscode: "v", "claude-code": "app-claude", codex: "x" },
+      (appId) => {
+        const ipc = new FakeIpc(appId);
+        created.push(ipc);
+        return ipc;
+      },
+    );
+
+    await writer.publish(card("cursor"), 1);
+    const dying = created[0]!;
+    const baseDisconnect = dying.disconnect.bind(dying);
+    dying.disconnect = async () => {
+      await disconnectGate.promise;
+      await baseDisconnect();
+    };
+
+    const claudePublish = writer.publish(card("claude-code"), 2);
+    const cursorPublish = writer.publish(card("cursor"), 3);
+
+    expect(created).toHaveLength(1);
+    expect(dying.activities).toHaveLength(1);
+
+    disconnectGate.resolve();
+    await Promise.all([claudePublish, cursorPublish]);
+
+    expect(created.map((ipc) => ipc.appId)).toEqual(["app-cursor", "app-claude", "app-cursor"]);
+    expect(dying.activities).toHaveLength(1);
+    expect(created[1]!.activities).toHaveLength(1);
+    expect(created[1]!.activities[0]!.pid).toBe(2);
+    expect(created[2]!.activities).toHaveLength(1);
+    expect(created[2]!.activities[0]!.pid).toBe(3);
   });
 
   it("reuses the same ipc for overlapping publishes while connect is pending", async () => {
@@ -205,6 +243,7 @@ describe("SwitchingDiscordWriter", () => {
 
     const first = writer.publish(card("cursor"), 1);
     const second = writer.publish(card("cursor"), 2);
+    await Promise.resolve();
 
     expect(created).toHaveLength(1);
     expect(created[0]!.connectCalls).toBe(1);

@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import type { Snapshot } from "@vibecoding/core";
 import { IDENTITIES, SURFACES } from "@vibecoding/core";
+import type { ConsoleFocusChecker } from "./console-focus.js";
+import { isWindowsConsoleForeground } from "./console-focus.js";
 
 function authorized(req: { headers: { authorization?: string } }, token: string): boolean {
   return req.headers.authorization === `Bearer ${token}`;
@@ -20,6 +22,8 @@ export async function startSnapshotServer(opts: {
   token: string;
   onUpsert: (snapshot: Snapshot) => Promise<void>;
   onRemove: (instanceId: string) => Promise<void>;
+  isConsoleForeground?: ConsoleFocusChecker;
+  platform?: NodeJS.Platform;
 }): Promise<{ port: number; close: () => Promise<void> }> {
   const server = createServer((req, res) => {
     if (!authorized(req, opts.token)) {
@@ -38,7 +42,7 @@ export async function startSnapshotServer(opts: {
               res.writeHead(400).end();
               return;
             }
-            await opts.onUpsert(body);
+            await opts.onUpsert(await applyCliFocusHeuristic(body, opts));
             res.writeHead(204).end();
           } catch {
             res.writeHead(400).end();
@@ -62,4 +66,13 @@ export async function startSnapshotServer(opts: {
     port: addr.port,
     close: () => new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };
+}
+
+async function applyCliFocusHeuristic(
+  snapshot: Snapshot,
+  opts: { isConsoleForeground?: ConsoleFocusChecker; platform?: NodeJS.Platform },
+): Promise<Snapshot> {
+  if ((opts.platform ?? process.platform) !== "win32" || snapshot.surface !== "cli") return snapshot;
+  const isConsoleForeground = opts.isConsoleForeground ?? isWindowsConsoleForeground;
+  return { ...snapshot, focused: await isConsoleForeground() };
 }

@@ -80,4 +80,38 @@ describe("createBrokerController", () => {
     await broker.flush();
     expect(writer.published.at(-1)?.details).toBe("b");
   });
+
+  it("does not block upsert on a pending Discord publish", async () => {
+    const writer = {
+      async publish(): Promise<void> {
+        await new Promise(() => {});
+      },
+      async clear(): Promise<void> {},
+    };
+    const broker = createBrokerController({
+      writer,
+      trayPid: 7,
+      pidAlive: () => true,
+      now: () => 0,
+      idleMinutes: 15,
+      debounceMs: 3000,
+    });
+    const result = await Promise.race([
+      broker
+        .upsert({
+          instanceId: "c",
+          pid: 1,
+          identity: "cursor",
+          surface: "ide-extension",
+          focused: true,
+          repo: "r",
+          sessionTitle: "s",
+          agentCount: 0,
+          lastActivityAt: 0,
+        })
+        .then(() => "resolved"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 10)),
+    ]);
+    expect(result).toBe("resolved");
+  });
 });

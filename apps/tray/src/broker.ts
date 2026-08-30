@@ -36,7 +36,7 @@ export function createBrokerController(opts: {
     }
     pending = false;
     lastFlushAt = opts.now();
-    if (next.card) await opts.writer.publish(next.card, opts.trayPid);
+    if (next.card) void opts.writer.publish(next.card, opts.trayPid).catch(() => {});
     else await opts.writer.clear();
     state = { ...next };
   }
