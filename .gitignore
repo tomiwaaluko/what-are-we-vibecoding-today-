@@ -1,0 +1,7 @@
+.superpowers/
+node_modules/
+dist/
+*.vsix
+.env
+.env.*
+!.env.example
