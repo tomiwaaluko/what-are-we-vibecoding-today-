@@ -6,6 +6,7 @@ import { SwitchingDiscordWriter } from "../writer.js";
 class FakeIpc implements DiscordIpc {
   appId: string;
   connected = false;
+  connectCalls = 0;
   activities: SetActivityPayload[] = [];
   cleared = 0;
   disconnected = 0;
@@ -13,6 +14,7 @@ class FakeIpc implements DiscordIpc {
     this.appId = appId;
   }
   async connect(): Promise<void> {
+    this.connectCalls += 1;
     this.connected = true;
   }
   async setActivity(activity: SetActivityPayload): Promise<void> {
@@ -25,6 +27,14 @@ class FakeIpc implements DiscordIpc {
     this.connected = false;
     this.disconnected += 1;
   }
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
 }
 
 const card = (identity: PresenceCard["identity"]): PresenceCard => ({
@@ -117,5 +127,35 @@ describe("SwitchingDiscordWriter", () => {
     expect(created).toHaveLength(1);
     expect(created[0]!.cleared).toBe(1);
     expect(created[0]!.disconnected).toBe(1);
+  });
+
+  it("reuses the same ipc for overlapping publishes while connect is pending", async () => {
+    const connecting = deferred();
+    const created: FakeIpc[] = [];
+    const writer = new SwitchingDiscordWriter(
+      { cursor: "app-cursor", vscode: "v", "claude-code": "c", codex: "x" },
+      (appId) => {
+        const ipc = new FakeIpc(appId);
+        ipc.connect = async () => {
+          ipc.connectCalls += 1;
+          await connecting.promise;
+          ipc.connected = true;
+        };
+        created.push(ipc);
+        return ipc;
+      },
+    );
+
+    const first = writer.publish(card("cursor"), 1);
+    const second = writer.publish(card("cursor"), 2);
+
+    expect(created).toHaveLength(1);
+    expect(created[0]!.connectCalls).toBe(1);
+
+    connecting.resolve();
+    await Promise.all([first, second]);
+
+    expect(created).toHaveLength(1);
+    expect(created[0]!.activities).toHaveLength(2);
   });
 });

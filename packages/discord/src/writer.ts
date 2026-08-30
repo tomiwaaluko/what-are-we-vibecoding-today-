@@ -2,7 +2,7 @@ import type { Identity, PresenceCard } from "@vibecoding/core";
 import type { DiscordIpc, SetActivityPayload } from "./ipc.js";
 
 export class SwitchingDiscordWriter {
-  private current: { identity: Identity; ipc: DiscordIpc } | null = null;
+  private current: { identity: Identity; ipc: DiscordIpc; connect: Promise<void> } | null = null;
 
   constructor(
     private readonly appIds: Record<Identity, string>,
@@ -20,10 +20,12 @@ export class SwitchingDiscordWriter {
     }
     if (!this.current) {
       const ipc = this.createIpc(appId);
-      await ipc.connect();
-      this.current = { identity: card.identity, ipc };
+      this.current = { identity: card.identity, ipc, connect: ipc.connect() };
     }
-    await this.current.ipc.setActivity(toPayload(card, trayPid));
+    const current = this.current;
+    await current.connect;
+    if (this.current !== current) return;
+    await current.ipc.setActivity(toPayload(card, trayPid));
   }
 
   async clear(): Promise<void> {

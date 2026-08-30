@@ -24,20 +24,24 @@ export function createXhayperIpc(
   opts: XhayperIpcOptions = {},
 ): DiscordIpc {
   let client: XhayperLike | null = null;
+  let cancelled = false;
   const delay = opts.delay ?? defaultDelay;
 
   async function connectWithRetry(): Promise<void> {
     let attempt = 0;
-    for (;;) {
+    while (!cancelled) {
       await client?.destroy().catch(() => {});
+      if (cancelled) return;
       client = factory(appId);
       try {
         await client.login();
+        if (cancelled) return;
         opts.onStatus?.("");
         return;
       } catch {
         await client.destroy().catch(() => {});
         client = null;
+        if (cancelled) return;
         opts.onStatus?.("Discord not connected");
         await delay(backoffMs[Math.min(attempt, backoffMs.length - 1)]!);
         attempt += 1;
@@ -63,14 +67,16 @@ export function createXhayperIpc(
       if (activity.smallImageKey) body.smallImageKey = activity.smallImageKey;
       if (activity.smallImageText) body.smallImageText = activity.smallImageText;
       let attempt = 0;
-      for (;;) {
+      while (!cancelled) {
         if (!client?.user) await connectWithRetry();
+        if (cancelled || !client?.user) return;
         try {
-          await client!.user!.setActivity(body);
+          await client.user.setActivity(body);
           return;
         } catch {
           await client?.destroy().catch(() => {});
           client = null;
+          if (cancelled) return;
           await delay(backoffMs[Math.min(attempt, backoffMs.length - 1)]!);
           attempt += 1;
         }
@@ -80,9 +86,13 @@ export function createXhayperIpc(
       await client?.user?.clearActivity();
     },
     async disconnect() {
-      await client?.user?.clearActivity();
-      await client?.destroy();
-      client = null;
+      cancelled = true;
+      try {
+        await client?.user?.clearActivity();
+      } finally {
+        await client?.destroy();
+        client = null;
+      }
     },
   };
 }
