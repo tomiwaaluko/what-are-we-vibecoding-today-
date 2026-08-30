@@ -62,18 +62,25 @@ export function createXhayperIpc(
       if (activity.state) body.state = activity.state;
       if (activity.smallImageKey) body.smallImageKey = activity.smallImageKey;
       if (activity.smallImageText) body.smallImageText = activity.smallImageText;
-      if (!client?.user) await connectWithRetry();
-      try {
-        await client!.user!.setActivity(body);
-      } catch {
-        await connectWithRetry();
-        await client!.user!.setActivity(body);
+      let attempt = 0;
+      for (;;) {
+        if (!client?.user) await connectWithRetry();
+        try {
+          await client!.user!.setActivity(body);
+          return;
+        } catch {
+          await client?.destroy().catch(() => {});
+          client = null;
+          await delay(backoffMs[Math.min(attempt, backoffMs.length - 1)]!);
+          attempt += 1;
+        }
       }
     },
     async clearActivity() {
       await client?.user?.clearActivity();
     },
     async disconnect() {
+      await client?.user?.clearActivity();
       await client?.destroy();
       client = null;
     },

@@ -83,4 +83,40 @@ describe("createXhayperIpc", () => {
     expect(statuses).toContain("Discord not connected");
     expect(statuses.at(-1)).toBe("");
   });
+
+  it("retries setActivity with backoff until success", async () => {
+    const delays: number[] = [];
+    let setAttempts = 0;
+    const ipc = createXhayperIpc(
+      "app",
+      () => ({
+        user: {
+          setActivity: async () => {
+            setAttempts += 1;
+            if (setAttempts < 3) throw new Error("setActivity failed");
+          },
+          clearActivity: async () => {},
+        },
+        login: async () => {},
+        destroy: async () => {},
+      }),
+      {
+        delay: async (ms) => {
+          delays.push(ms);
+        },
+      },
+    );
+
+    await ipc.connect();
+    await ipc.setActivity({
+      pid: 12,
+      details: "d",
+      startTimestamp: 50,
+      largeImageKey: "cursor",
+      largeImageText: "Cursor",
+    });
+
+    expect(setAttempts).toBe(3);
+    expect(delays).toEqual([1000, 2000]);
+  });
 });
