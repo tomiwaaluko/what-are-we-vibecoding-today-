@@ -1,0 +1,21 @@
+{
+  "name": "vibecoding-presence",
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./src/extension.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vibecoding/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}
