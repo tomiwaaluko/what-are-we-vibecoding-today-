@@ -9,7 +9,6 @@ export function dropStale(
 ): StoredInstance[] {
   return instances.filter((inst) => {
     if (inst.snapshot.surface === "ide-extension") {
-      if (inst.snapshot.focused || inst.snapshot.agentCount > 0) return true;
       return now - inst.lastHeartbeatAt <= HEARTBEAT_TIMEOUT_MS;
     }
     return pidAlive(inst.snapshot.pid);

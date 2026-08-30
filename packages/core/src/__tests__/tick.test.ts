@@ -40,19 +40,19 @@ describe("tick", () => {
   it("does not idle while focused or while agents run", () => {
     const fifteenMin = 15 * 60 * 1000;
     let focused = emptyBrokerState();
-    focused = upsert(
-      focused,
-      snap({ instanceId: "c", identity: "cursor", focused: true, lastActivityAt: 0 }),
-      0,
-    );
+    const focusedSnap = snap({ instanceId: "c", identity: "cursor", focused: true, lastActivityAt: 0 });
+    focused = upsert(focused, focusedSnap, 0);
+    for (let t = 10_000; t < fifteenMin; t += 10_000) {
+      focused = upsert(focused, { ...focusedSnap, lastActivityAt: 0 }, t);
+    }
     expect(tick(focused, fifteenMin, { idleMinutes, pidAlive: alwaysAlive }).card).not.toBeNull();
 
     let agents = emptyBrokerState();
-    agents = upsert(
-      agents,
-      snap({ instanceId: "c", identity: "claude-code", agentCount: 1, lastActivityAt: 0 }),
-      0,
-    );
+    const agentsSnap = snap({ instanceId: "c", identity: "claude-code", agentCount: 1, lastActivityAt: 0 });
+    agents = upsert(agents, agentsSnap, 0);
+    for (let t = 10_000; t < fifteenMin; t += 10_000) {
+      agents = upsert(agents, { ...agentsSnap, lastActivityAt: 0 }, t);
+    }
     expect(tick(agents, fifteenMin, { idleMinutes, pidAlive: alwaysAlive }).card).not.toBeNull();
   });
 
