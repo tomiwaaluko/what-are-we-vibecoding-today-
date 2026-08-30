@@ -24,6 +24,7 @@ class FakeIpc implements DiscordIpc {
     this.cleared += 1;
   }
   async disconnect(): Promise<void> {
+    await this.clearActivity();
     this.connected = false;
     this.disconnected += 1;
   }
@@ -149,6 +150,40 @@ describe("SwitchingDiscordWriter", () => {
     expect(created).toHaveLength(2);
     expect(created[1]!.connected).toBe(true);
     expect(created[1]!.activities).toHaveLength(1);
+  });
+
+  it("does not set activity on dying ipc when publish races with clear", async () => {
+    const disconnectGate = deferred();
+    const created: FakeIpc[] = [];
+    const writer = new SwitchingDiscordWriter(
+      { cursor: "app-cursor", vscode: "v", "claude-code": "c", codex: "x" },
+      (appId) => {
+        const ipc = new FakeIpc(appId);
+        created.push(ipc);
+        return ipc;
+      },
+    );
+
+    await writer.publish(card("cursor"), 1);
+    const dying = created[0]!;
+    const baseDisconnect = dying.disconnect.bind(dying);
+    dying.disconnect = async () => {
+      await disconnectGate.promise;
+      await baseDisconnect();
+    };
+
+    const clearing = writer.clear();
+    const publishing = writer.publish(card("cursor"), 99);
+
+    expect(created).toHaveLength(2);
+
+    disconnectGate.resolve();
+    await Promise.all([clearing, publishing]);
+
+    expect(dying.activities).toHaveLength(1);
+    expect(dying.activities[0]!.pid).toBe(1);
+    expect(created[1]!.activities).toHaveLength(1);
+    expect(created[1]!.activities[0]!.pid).toBe(99);
   });
 
   it("reuses the same ipc for overlapping publishes while connect is pending", async () => {
