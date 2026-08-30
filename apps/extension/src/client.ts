@@ -23,7 +23,10 @@ export async function pushSnapshot(home: string, snapshot: Snapshot): Promise<vo
         headers: { Authorization: `Bearer ${runtime.token}`, "Content-Type": "application/json" },
         body: JSON.stringify(snapshot),
       });
-      if (res.ok) return;
+      if (res.ok) {
+        rmSync(join(home, "status", `${snapshot.instanceId}.json`), { force: true });
+        return;
+      }
     } catch {
       /* file fallback */
     }
@@ -37,13 +40,12 @@ export async function clearSnapshot(home: string, instanceId: string): Promise<v
   const runtime = readRuntime(home);
   if (runtime) {
     try {
-      const res = await fetch(`http://127.0.0.1:${runtime.port}/snapshot/${encodeURIComponent(instanceId)}`, {
+      await fetch(`http://127.0.0.1:${runtime.port}/snapshot/${encodeURIComponent(instanceId)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${runtime.token}` },
       });
-      if (res.ok) return;
     } catch {
-      /* file fallback */
+      /* continue to local cleanup */
     }
   }
   rmSync(join(home, "status", `${instanceId}.json`), { force: true });
