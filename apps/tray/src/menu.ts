@@ -8,29 +8,42 @@ export type TrayBroker = {
   getState: () => { paused: boolean; lastCard: { details: string } | null };
 };
 
+export type TrayMenu = {
+  setStatusTooltip: (tooltip: string) => void;
+};
+
 export function startTrayMenu(opts: {
   configPath: string;
   iconPath?: string;
   broker: TrayBroker;
   onQuit: () => Promise<void>;
-}): SysTray {
+}): TrayMenu {
   const icon = opts.iconPath ?? join(dirname(fileURLToPath(import.meta.url)), "..", "assets", "icon.ico");
   const preview = opts.broker.getState().lastCard?.details ?? "No presence";
+  const menu = {
+    icon,
+    title: "Vibecoding",
+    tooltip: "What are we vibecoding today",
+    items: [
+      { title: preview, tooltip: preview, enabled: false, checked: false },
+      { title: "Pause", tooltip: "Pause Discord presence", enabled: true, checked: opts.broker.getState().paused },
+      { title: "Open config", tooltip: "Open config.json", enabled: true, checked: false },
+      { title: "Quit", tooltip: "Quit", enabled: true, checked: false },
+    ],
+  };
   const systray = new SysTray({
-    menu: {
-      icon,
-      title: "Vibecoding",
-      tooltip: "What are we vibecoding today",
-      items: [
-        { title: preview, tooltip: preview, enabled: false, checked: false },
-        { title: "Pause", tooltip: "Pause Discord presence", enabled: true, checked: opts.broker.getState().paused },
-        { title: "Open config", tooltip: "Open config.json", enabled: true, checked: false },
-        { title: "Quit", tooltip: "Quit", enabled: true, checked: false },
-      ],
-    },
+    menu,
     debug: false,
     copyDir: true,
   });
+  const trayMenu = systray as unknown as TrayMenu;
+  trayMenu.setStatusTooltip = (tooltip: string) => {
+    menu.tooltip = tooltip || "What are we vibecoding today";
+    void systray.sendAction({
+      type: "update-menu",
+      menu,
+    });
+  };
   systray.onClick((action) => {
     if (action.seq_id === 1) {
       const next = !opts.broker.getState().paused;
@@ -49,5 +62,5 @@ export function startTrayMenu(opts: {
       void opts.onQuit().then(() => process.exit(0));
     }
   });
-  return systray;
+  return trayMenu;
 }

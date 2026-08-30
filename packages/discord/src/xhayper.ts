@@ -10,18 +10,46 @@ export type XhayperLike = {
   destroy: () => Promise<unknown>;
 };
 
+export type XhayperIpcOptions = {
+  delay?: (ms: number) => Promise<void>;
+  onStatus?: (text: string) => void;
+};
+
+const backoffMs = [1000, 2000, 5000, 10000];
+const defaultDelay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export function createXhayperIpc(
   appId: string,
   factory: (appId: string) => XhayperLike = (id) => new Client({ clientId: id }) as unknown as XhayperLike,
+  opts: XhayperIpcOptions = {},
 ): DiscordIpc {
   let client: XhayperLike | null = null;
+  const delay = opts.delay ?? defaultDelay;
+
+  async function connectWithRetry(): Promise<void> {
+    let attempt = 0;
+    for (;;) {
+      await client?.destroy().catch(() => {});
+      client = factory(appId);
+      try {
+        await client.login();
+        opts.onStatus?.("");
+        return;
+      } catch {
+        await client.destroy().catch(() => {});
+        client = null;
+        opts.onStatus?.("Discord not connected");
+        await delay(backoffMs[Math.min(attempt, backoffMs.length - 1)]!);
+        attempt += 1;
+      }
+    }
+  }
+
   return {
     async connect() {
-      client = factory(appId);
-      await client.login();
+      await connectWithRetry();
     },
     async setActivity(activity: SetActivityPayload) {
-      if (!client?.user) throw new Error("Discord IPC is not connected");
       const body: Record<string, unknown> = {
         pid: activity.pid,
         details: activity.details,
@@ -34,7 +62,13 @@ export function createXhayperIpc(
       if (activity.state) body.state = activity.state;
       if (activity.smallImageKey) body.smallImageKey = activity.smallImageKey;
       if (activity.smallImageText) body.smallImageText = activity.smallImageText;
-      await client.user.setActivity(body);
+      if (!client?.user) await connectWithRetry();
+      try {
+        await client!.user!.setActivity(body);
+      } catch {
+        await connectWithRetry();
+        await client!.user!.setActivity(body);
+      }
     },
     async clearActivity() {
       await client?.user?.clearActivity();

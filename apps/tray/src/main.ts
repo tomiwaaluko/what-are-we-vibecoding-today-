@@ -14,7 +14,12 @@ async function main(): Promise<void> {
   const config = loadConfig(home);
   saveConfig(home, config);
   const missingAppIdLogged = new Set<Identity>();
-  const inner = new SwitchingDiscordWriter(config.applicationIds, (appId) => createXhayperIpc(appId));
+  let tray: ReturnType<typeof startTrayMenu> | null = null;
+  const inner = new SwitchingDiscordWriter(config.applicationIds, (appId) =>
+    createXhayperIpc(appId, undefined, {
+      onStatus: (text) => tray?.setStatusTooltip(text),
+    }),
+  );
   const writer = {
     async publish(card: Parameters<typeof inner.publish>[0], trayPid: number) {
       const appId = config.applicationIds[card.identity];
@@ -49,7 +54,7 @@ async function main(): Promise<void> {
       void broker.upsert(snapshot);
     }
   }, 2000);
-  startTrayMenu({
+  tray = startTrayMenu({
     configPath: configPath(home),
     broker,
     onQuit: async () => {

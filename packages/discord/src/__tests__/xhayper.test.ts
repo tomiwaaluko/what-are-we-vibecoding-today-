@@ -41,4 +41,46 @@ describe("createXhayperIpc", () => {
     expect(calls).toContain("clear");
     expect(calls).toContain("destroy");
   });
+
+  it("retries login with backoff and reports disconnected status", async () => {
+    const delays: number[] = [];
+    const statuses: string[] = [];
+    let attempts = 0;
+    const ipc = createXhayperIpc(
+      "app",
+      () => ({
+        user: {
+          setActivity: async () => {},
+          clearActivity: async () => {},
+        },
+        login: async () => {
+          attempts += 1;
+          if (attempts < 3) throw new Error("login failed");
+        },
+        destroy: async () => {},
+      }),
+      {
+        delay: async (ms) => {
+          delays.push(ms);
+        },
+        onStatus: (text) => {
+          statuses.push(text);
+        },
+      },
+    );
+
+    await ipc.connect();
+    await ipc.setActivity({
+      pid: 12,
+      details: "d",
+      startTimestamp: 50,
+      largeImageKey: "cursor",
+      largeImageText: "Cursor",
+    });
+
+    expect(attempts).toBe(3);
+    expect(delays).toEqual([1000, 2000]);
+    expect(statuses).toContain("Discord not connected");
+    expect(statuses.at(-1)).toBe("");
+  });
 });
