@@ -1,0 +1,14 @@
+{
+  "name": "what-are-we-vibecoding-today",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "tray": "pnpm --filter @vibecoding/tray start"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "active-win"]
+  }
+}
