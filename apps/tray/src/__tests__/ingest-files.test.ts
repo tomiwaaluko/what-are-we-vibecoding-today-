@@ -77,4 +77,13 @@ describe("readStatusDir", () => {
     });
     expect(snapshots[0]!.focused).toBe(true);
   });
+
+  it("skips snapshots missing required fields", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "st-"));
+    writeFileSync(
+      join(dir, "partial.json"),
+      JSON.stringify({ instanceId: "codex-cli-1", identity: "codex", surface: "cli" }),
+    );
+    expect(await readStatusDir(dir)).toEqual([]);
+  });
 });

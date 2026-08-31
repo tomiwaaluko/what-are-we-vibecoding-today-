@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PresenceCard } from "@vibecoding/core";
 import type { DiscordIpc, SetActivityPayload } from "../ipc.js";
 import { SwitchingDiscordWriter } from "../writer.js";
+import { createXhayperIpc } from "../xhayper.js";
 
 class FakeIpc implements DiscordIpc {
   appId: string;
@@ -174,15 +175,16 @@ describe("SwitchingDiscordWriter", () => {
 
     const clearing = writer.clear();
     const publishing = writer.publish(card("cursor"), 99);
+    await Promise.resolve();
 
-    expect(created).toHaveLength(1);
+    expect(created).toHaveLength(2);
+    expect(dying.activities).toHaveLength(1);
 
     disconnectGate.resolve();
     await Promise.all([clearing, publishing]);
 
     expect(dying.activities).toHaveLength(1);
     expect(dying.activities[0]!.pid).toBe(1);
-    expect(created).toHaveLength(2);
     expect(created[1]!.activities).toHaveLength(1);
     expect(created[1]!.activities[0]!.pid).toBe(99);
   });
@@ -253,5 +255,43 @@ describe("SwitchingDiscordWriter", () => {
 
     expect(created).toHaveLength(1);
     expect(created[0]!.activities).toHaveLength(2);
+  });
+
+  it("clear completes while publish is stuck in Discord connect retries", async () => {
+    const delay = deferred();
+    let delayStarted!: () => void;
+    const delayReady = new Promise<void>((resolve) => {
+      delayStarted = resolve;
+    });
+    const writer = new SwitchingDiscordWriter(
+      { cursor: "app-cursor", vscode: "v", "claude-code": "c", codex: "x" },
+      (appId) =>
+        createXhayperIpc(
+          appId,
+          () => ({
+            user: null,
+            login: async () => {
+              throw new Error("login failed");
+            },
+            destroy: async () => {},
+          }),
+          {
+            delay: async () => {
+              delayStarted();
+              await delay.promise;
+            },
+          },
+        ),
+    );
+
+    const publishing = writer.publish(card("cursor"), 1);
+    await delayReady;
+    const result = await Promise.race([
+      writer.clear().then(() => "cleared" as const),
+      new Promise<"blocked">((resolve) => setTimeout(() => resolve("blocked"), 80)),
+    ]);
+    expect(result).toBe("cleared");
+    delay.resolve();
+    await publishing;
   });
 });

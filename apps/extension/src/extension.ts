@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { nextLastActivityAt } from "./activity.js";
 import { mapExtensionState } from "./map-snapshot.js";
 import { clearSnapshot, pushSnapshot } from "./client.js";
+import { chatTabTitle } from "./chat-title.js";
 
 function home(): string {
   return process.env.VIBECODING_HOME || joinAppData();
@@ -21,13 +22,13 @@ function gitBranch(): string | null {
   return repo?.state?.HEAD?.name ?? null;
 }
 
-function chatTabTitle(): string | null {
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (tab.isActive && /chat|composer|agent/i.test(tab.label)) return tab.label;
-    }
-  }
-  return null;
+function currentChatTabTitle(): string | null {
+  return chatTabTitle(
+    vscode.window.tabGroups.all.map((group) => ({
+      isActive: group.isActive,
+      tabs: group.tabs.map((tab) => ({ isActive: tab.isActive, label: tab.label })),
+    })),
+  );
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -46,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       pid: process.pid,
       focused: vscode.window.state.focused,
       workspaceFolderName: folder,
-      chatTabTitle: chatTabTitle(),
+      chatTabTitle: currentChatTabTitle(),
       activeFileName: fileName,
       gitBranch: gitBranch(),
       agentCount: 0,

@@ -26,4 +26,10 @@ describe("status files", () => {
     deleteStatus(dir, sample.instanceId);
     expect(existsSync(path)).toBe(false);
   });
+
+  it("rejects instance ids that would escape the status directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vibecoding-"));
+    expect(() => writeStatus(dir, { ...sample, instanceId: "../escape" })).toThrow(/filename/);
+    expect(() => deleteStatus(dir, "..\\escape")).toThrow(/filename/);
+  });
 });

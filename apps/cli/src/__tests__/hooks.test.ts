@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,23 @@ describe("Claude hook scripts", () => {
 
     expect(spawnSync(process.execPath, [stop], { env, stdio: "pipe" }).status).toBe(0);
     expect(existsSync(statusPath)).toBe(false);
+  });
+
+  it("falls back to a direct status write when VIBECODING_CLI exits nonzero", () => {
+    const home = mkdtempSync(join(tmpdir(), "vibecoding-hooks-"));
+    const fail = join(home, "fail.cjs");
+    writeFileSync(fail, "process.exit(1);\n");
+    const env = {
+      ...process.env,
+      VIBECODING_HOME: home,
+      VIBECODING_CLI: fail,
+      CLAUDE_PROJECT_DIR: "C:\\Users\\me\\what-are-we-vibecoding-today",
+    };
+    const start = join(hooksDir, "claude-session-start.cjs");
+    const instanceId = `claude-code-cli-${process.pid}`;
+    const statusPath = join(home, "status", `${instanceId}.json`);
+    expect(spawnSync(process.execPath, [start], { env, stdio: "pipe" }).status).toBe(0);
+    expect(existsSync(statusPath)).toBe(true);
   });
 });
 

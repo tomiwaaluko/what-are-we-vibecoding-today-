@@ -10,7 +10,8 @@ for (let i = 0; i < size * size; i++) {
   xor[i * 4 + 2] = 0x58;
   xor[i * 4 + 3] = 0xff;
 }
-const and = Buffer.alloc((size * size) / 8, 0);
+const andStride = Math.ceil(size / 32) * 4;
+const and = Buffer.alloc(andStride * size, 0);
 const dib = Buffer.alloc(40);
 dib.writeUInt32LE(40, 0);
 dib.writeInt32LE(size, 4);

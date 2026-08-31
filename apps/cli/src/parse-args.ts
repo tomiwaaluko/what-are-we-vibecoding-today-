@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import type { Identity, Snapshot, Surface } from "@vibecoding/core";
 import { IDENTITIES, SURFACES } from "@vibecoding/core";
+import { assertSafeInstanceId } from "./status-file.js";
 
 export type ParsedArgs =
   | { action: "upsert"; snapshot: Snapshot }
@@ -40,6 +41,7 @@ export function parseStatusArgs(argv: string[], now: number): ParsedArgs {
   if (has(args, "--clear")) {
     const instanceId = flag(args, "--instance");
     if (!instanceId) throw new Error("--clear requires --instance");
+    assertSafeInstanceId(instanceId);
     return { action: "clear", instanceId };
   }
   const identity = asIdentity(flag(args, "--identity"));
@@ -47,8 +49,10 @@ export function parseStatusArgs(argv: string[], now: number): ParsedArgs {
   const pid = Number(flag(args, "--pid") ?? process.ppid);
   if (!Number.isInteger(pid) || pid <= 0) throw new Error("--pid must be a positive integer");
   const instanceId = flag(args, "--instance") ?? `${identity}-${surface}-${pid}`;
+  assertSafeInstanceId(instanceId);
   const agents = Number(flag(args, "--agents") ?? "0");
   const activityAt = Number(flag(args, "--activity-at") ?? String(now));
+  if (!Number.isFinite(activityAt)) throw new Error("--activity-at must be a finite number");
   return {
     action: "upsert",
     snapshot: {

@@ -45,4 +45,13 @@ describe("parseStatusArgs", () => {
       instanceId: "abc",
     });
   });
+
+  it("rejects a non-finite --activity-at", () => {
+    expect(() =>
+      parseStatusArgs(["status", "--identity", "cursor", "--pid", "1", "--activity-at", "NaN"], 1),
+    ).toThrow("--activity-at must be a finite number");
+    expect(() =>
+      parseStatusArgs(["status", "--identity", "cursor", "--pid", "1", "--activity-at", "Infinity"], 1),
+    ).toThrow("--activity-at must be a finite number");
+  });
 });

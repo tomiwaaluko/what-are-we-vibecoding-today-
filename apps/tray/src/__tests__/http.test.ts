@@ -78,4 +78,31 @@ describe("startSnapshotServer", () => {
     expect(upserts[0]).toMatchObject({ focused: true });
     await server.close();
   });
+
+  it("rejects an incomplete snapshot and handles DELETE failures", async () => {
+    const server = await startSnapshotServer({
+      token: "secret",
+      onUpsert: async () => {},
+      onRemove: async () => {
+        throw new Error("remove failed");
+      },
+    });
+    const incomplete = await fetch(`http://127.0.0.1:${server.port}/snapshot`, {
+      method: "PUT",
+      headers: { Authorization: "Bearer secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId: "c", identity: "cursor", surface: "ide-extension" }),
+    });
+    expect(incomplete.status).toBe(400);
+    const del = await fetch(`http://127.0.0.1:${server.port}/snapshot/%E0%`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer secret" },
+    });
+    expect(del.status).toBe(400);
+    const failed = await fetch(`http://127.0.0.1:${server.port}/snapshot/c`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer secret" },
+    });
+    expect(failed.status).toBe(500);
+    await server.close();
+  });
 });

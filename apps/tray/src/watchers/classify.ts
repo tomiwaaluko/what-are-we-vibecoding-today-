@@ -8,12 +8,12 @@ export function classifyDesktopWindow(input: {
 }): Snapshot | null {
   const processName = input.processName.replace(/\.exe$/i, "");
   if (/chatgpt/i.test(processName)) {
-    if (!/codex/i.test(input.title)) return null;
+    if (!/^\s*codex\b/i.test(input.title)) return null;
     return base("codex", input);
   }
   if (/^claude$/i.test(processName)) {
     if (/\bcowork\b/i.test(input.title)) return null;
-    if (!/\bcode\b/i.test(input.title)) return null;
+    if (!/^\s*code\b/i.test(input.title)) return null;
     return base("claude-code", input);
   }
   return null;

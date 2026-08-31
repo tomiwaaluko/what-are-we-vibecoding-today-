@@ -12,11 +12,11 @@ function appDataRoot() {
 const cli = process.env.VIBECODING_CLI;
 if (cli) {
   const instance = `claude-code-cli-${process.ppid}`;
-  spawnSync(process.execPath, [cli, "status", "--clear", "--instance", instance], {
+  const dispatched = spawnSync(process.execPath, [cli, "status", "--clear", "--instance", instance], {
     stdio: "ignore",
     windowsHide: true,
   });
-  process.exit(0);
+  if (dispatched.status === 0) process.exit(0);
 }
 
 const instanceId = `claude-code-cli-${process.ppid}`;

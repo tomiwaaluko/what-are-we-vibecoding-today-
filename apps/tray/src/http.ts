@@ -1,21 +1,10 @@
 import { createServer } from "node:http";
-import type { Snapshot } from "@vibecoding/core";
-import { IDENTITIES, SURFACES } from "@vibecoding/core";
+import { isSnapshot, type Snapshot } from "@vibecoding/core";
 import type { ConsoleFocusChecker } from "./console-focus.js";
 import { isWindowsConsoleForeground } from "./console-focus.js";
 
 function authorized(req: { headers: { authorization?: string } }, token: string): boolean {
   return req.headers.authorization === `Bearer ${token}`;
-}
-
-function isSnapshot(value: unknown): value is Snapshot {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Snapshot;
-  return (
-    typeof v.instanceId === "string" &&
-    IDENTITIES.includes(v.identity) &&
-    SURFACES.includes(v.surface)
-  );
 }
 
 export async function startSnapshotServer(opts: {
@@ -30,7 +19,13 @@ export async function startSnapshotServer(opts: {
       res.writeHead(401).end();
       return;
     }
-    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    let url: URL;
+    try {
+      url = new URL(req.url ?? "/", "http://127.0.0.1");
+    } catch {
+      res.writeHead(400).end();
+      return;
+    }
     if (req.method === "PUT" && url.pathname === "/snapshot") {
       const chunks: Buffer[] = [];
       req.on("data", (c) => chunks.push(c));
@@ -53,7 +48,21 @@ export async function startSnapshotServer(opts: {
     }
     const del = /^\/snapshot\/([^/]+)$/.exec(url.pathname);
     if (req.method === "DELETE" && del) {
-      void opts.onRemove(decodeURIComponent(del[1]!)).then(() => res.writeHead(204).end());
+      void (async () => {
+        let instanceId: string;
+        try {
+          instanceId = decodeURIComponent(del[1]!);
+        } catch {
+          res.writeHead(400).end();
+          return;
+        }
+        try {
+          await opts.onRemove(instanceId);
+          res.writeHead(204).end();
+        } catch {
+          res.writeHead(500).end();
+        }
+      })();
       return;
     }
     res.writeHead(404).end();

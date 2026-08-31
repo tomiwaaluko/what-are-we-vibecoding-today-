@@ -63,7 +63,7 @@ Disable any other Discord Rich Presence / vscode-discord extension so you do not
 
 ## Connectors
 
-- Cursor / VS Code: open `apps/extension` and press F5 (Extension Development Host).
+- Cursor / VS Code: from this repo, press F5 (`Launch Extension`). That runs `pnpm --filter vibecoding-presence build` first and loads `apps/extension/dist/extension.cjs`. You can also build manually with `pnpm --filter vibecoding-presence build` before launching.
 - Claude Code CLI: `docs/hooks/claude-code.md`
 - Codex CLI: `docs/hooks/codex.md` (use `commandWindows`; approve/trust the hook on Windows)
 

@@ -26,11 +26,11 @@ try {
 const cli = process.env.VIBECODING_CLI;
 if (cli) {
   const pid = String(process.ppid);
-  spawnSync(process.execPath, [cli, "status", "--identity", "codex", "--surface", "cli", "--pid", pid, "--repo", cwd], {
+  const dispatched = spawnSync(process.execPath, [cli, "status", "--identity", "codex", "--surface", "cli", "--pid", pid, "--repo", cwd], {
     stdio: "ignore",
     windowsHide: true,
   });
-  process.exit(0);
+  if (dispatched.status === 0) process.exit(0);
 }
 
 const pid = process.ppid;

@@ -22,7 +22,7 @@ Wire Claude Code session events into the vibecoding tray via small Node hook scr
 |-------|--------------|
 | **SessionStart** | Writes a status snapshot under `%APPDATA%\vibecoding\status\` (or `VIBECODING_HOME`) using `CLAUDE_PROJECT_DIR` and the parent process PID. |
 | **Agent start/stop** (if Claude exposes it) | Update `agentCount` while agents run, then `0` on Stop. |
-| **Stop / session end** | Deletes `claude-code-cli-<pid>.json` from the status directory. |
+| **SessionEnd** | Deletes `claude-code-cli-<pid>.json` from the status directory. **Stop** is the wrong event for presence — it fires after every turn and would drop the Playing card mid-session. |
 
 Keep `agentCount` at **0** unless a future Claude hook payload includes an agent count. Do **not** set `agentCount` to 1 for the whole session lifetime.
 
@@ -41,7 +41,7 @@ Keep `agentCount` at **0** unless a future Claude hook payload includes an agent
         ]
       }
     ],
-    "Stop": [
+    "SessionEnd": [
       {
         "hooks": [
           {

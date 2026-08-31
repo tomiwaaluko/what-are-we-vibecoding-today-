@@ -33,6 +33,9 @@ importers:
       '@types/vscode':
         specifier: ^1.85.0
         version: 1.134.0
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.2
       typescript:
         specifier: ^7.0.2
         version: 7.0.2

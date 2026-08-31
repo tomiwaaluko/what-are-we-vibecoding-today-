@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./snapshot.js";
 export * from "./merge.js";
 export * from "./picker.js";
 export * from "./truncate.js";

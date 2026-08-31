@@ -18,11 +18,11 @@ const cli = process.env.VIBECODING_CLI;
 if (cli) {
   const pid = String(process.ppid);
   const repo = process.env.CLAUDE_PROJECT_DIR || "";
-  spawnSync(process.execPath, [cli, "status", "--identity", "claude-code", "--surface", "cli", "--pid", pid, "--repo", repo], {
+  const dispatched = spawnSync(process.execPath, [cli, "status", "--identity", "claude-code", "--surface", "cli", "--pid", pid, "--repo", repo], {
     stdio: "ignore",
     windowsHide: true,
   });
-  process.exit(0);
+  if (dispatched.status === 0) process.exit(0);
 }
 
 const pid = process.ppid;

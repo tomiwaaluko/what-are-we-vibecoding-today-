@@ -23,18 +23,41 @@ export function createBrokerController(opts: {
 }) {
   let state = emptyBrokerState();
   let lastFlushAt = -opts.debounceMs;
-  let pending = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let chain = Promise.resolve();
+
+  function serialize(operation: () => Promise<void>): Promise<void> {
+    const next = chain.then(operation, operation);
+    chain = next.catch(() => {});
+    return next;
+  }
+
+  function clearTimer(): void {
+    if (!timer) return;
+    clearTimeout(timer);
+    timer = null;
+  }
+
+  function schedule(): void {
+    if (timer) return;
+    const wait = Math.max(0, opts.debounceMs - (opts.now() - lastFlushAt));
+    timer = setTimeout(() => {
+      timer = null;
+      lastFlushAt = -opts.debounceMs;
+      void serialize(() => apply());
+    }, wait);
+  }
 
   async function apply(): Promise<void> {
     const next = tick(state, opts.now(), { idleMinutes: opts.idleMinutes, pidAlive: opts.pidAlive });
     const immediate = isImmediatePublish(state.lastCard, next.card);
     const due = opts.now() - lastFlushAt >= opts.debounceMs;
     if (!immediate && !due && next.card) {
-      pending = true;
       state = { ...next };
+      schedule();
       return;
     }
-    pending = false;
+    clearTimer();
     lastFlushAt = opts.now();
     if (next.card) void opts.writer.publish(next.card, opts.trayPid).catch(() => {});
     else await opts.writer.clear();
@@ -42,21 +65,29 @@ export function createBrokerController(opts: {
   }
 
   return {
-    async upsert(snapshot: Snapshot) {
-      state = upsert(state, snapshot, opts.now());
-      await apply();
+    upsert(snapshot: Snapshot) {
+      return serialize(async () => {
+        state = upsert(state, snapshot, opts.now());
+        await apply();
+      });
     },
-    async setPaused(paused: boolean) {
-      state = { ...state, paused };
-      await apply();
+    setPaused(paused: boolean) {
+      return serialize(async () => {
+        state = { ...state, paused };
+        await apply();
+      });
     },
-    async flush() {
-      lastFlushAt = -opts.debounceMs;
-      await apply();
+    flush() {
+      return serialize(async () => {
+        lastFlushAt = -opts.debounceMs;
+        await apply();
+      });
     },
-    async remove(instanceId: string) {
-      state = removeInstance(state, instanceId);
-      await apply();
+    remove(instanceId: string) {
+      return serialize(async () => {
+        state = removeInstance(state, instanceId);
+        await apply();
+      });
     },
     getState() {
       return state;

@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Snapshot } from "@vibecoding/core";
-import { IDENTITIES, SURFACES } from "@vibecoding/core";
+import { isSnapshot, type Snapshot } from "@vibecoding/core";
 import type { ConsoleFocusChecker } from "./console-focus.js";
 import { isWindowsConsoleForeground } from "./console-focus.js";
 
@@ -26,14 +25,8 @@ export async function readStatusDir(dir: string, opts: ReadStatusDirOptions = {}
       const mtimeMs = statSync(path).mtimeMs;
       if (opts.seenMtimes?.get(path) === mtimeMs) continue;
       opts.seenMtimes?.set(path, mtimeMs);
-      const raw = JSON.parse(readFileSync(path, "utf8")) as Snapshot;
-      if (
-        typeof raw.instanceId === "string" &&
-        IDENTITIES.includes(raw.identity) &&
-        SURFACES.includes(raw.surface)
-      ) {
-        out.push(await applyCliFocusHeuristic(raw, opts));
-      }
+      const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      if (isSnapshot(raw)) out.push(await applyCliFocusHeuristic(raw, opts));
     } catch {
       /* skip */
     }

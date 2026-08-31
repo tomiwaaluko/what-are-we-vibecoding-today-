@@ -81,6 +81,44 @@ describe("createBrokerController", () => {
     expect(writer.published.at(-1)?.details).toBe("b");
   });
 
+  it("publishes a debounced session edit when debounceMs elapses", async () => {
+    const writer = new RecordingWriter();
+    const started = Date.now();
+    const broker = createBrokerController({
+      writer,
+      trayPid: 7,
+      pidAlive: () => true,
+      now: () => Date.now() - started,
+      idleMinutes: 15,
+      debounceMs: 20,
+    });
+    await broker.upsert({
+      instanceId: "c",
+      pid: 1,
+      identity: "cursor",
+      surface: "ide-extension",
+      focused: true,
+      repo: "r",
+      sessionTitle: "a",
+      agentCount: 0,
+      lastActivityAt: 0,
+    });
+    await broker.upsert({
+      instanceId: "c",
+      pid: 1,
+      identity: "cursor",
+      surface: "ide-extension",
+      focused: true,
+      repo: "r",
+      sessionTitle: "b",
+      agentCount: 0,
+      lastActivityAt: 1,
+    });
+    expect(writer.published).toHaveLength(1);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(writer.published.at(-1)?.details).toBe("b");
+  });
+
   it("does not block upsert on a pending Discord publish", async () => {
     const writer = {
       async publish(): Promise<void> {

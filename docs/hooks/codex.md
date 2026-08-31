@@ -40,7 +40,7 @@ matcher = "startup|resume"
 [[hooks.SessionStart.hooks]]
 type = "command"
 command = "node ./unused-unix.js"
-commandWindows = "node C:\\Users\\<you>\\Documents\\GitHub\\what-are-we-vibecoding-today\\apps\\cli\\hooks\\codex-session-start.cjs"
+commandWindows = "node \"%APPDATA%\\vibecoding\\hooks\\codex-session-start.cjs\""
 
 [[hooks.SessionEnd]]
 matcher = ".*"
@@ -48,7 +48,7 @@ matcher = ".*"
 [[hooks.SessionEnd.hooks]]
 type = "command"
 command = "node ./unused-unix.js"
-commandWindows = "node C:\\Users\\<you>\\Documents\\GitHub\\what-are-we-vibecoding-today\\apps\\cli\\hooks\\codex-session-end.cjs"
+commandWindows = "node \"%APPDATA%\\vibecoding\\hooks\\codex-session-end.cjs\""
 ```
 
 If Codex uses **Stop** instead of **SessionEnd**, point the same `codex-session-end.cjs` script at that event:
@@ -60,7 +60,7 @@ matcher = ".*"
 [[hooks.Stop.hooks]]
 type = "command"
 command = "node ./unused-unix.js"
-commandWindows = "node C:\\Users\\<you>\\Documents\\GitHub\\what-are-we-vibecoding-today\\apps\\cli\\hooks\\codex-session-end.cjs"
+commandWindows = "node \"%APPDATA%\\vibecoding\\hooks\\codex-session-end.cjs\""
 ```
 
 ## What the scripts do
